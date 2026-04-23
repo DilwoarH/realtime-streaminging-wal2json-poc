@@ -39,6 +39,8 @@ services:
       PGUSER:     postgres
       PGPASSWORD: postgres
       SLOT_NAME:  wal2json_slot
+    volumes:
+      - ./python:/app
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,6 +59,8 @@ services:
       PGUSER:     postgres
       PGPASSWORD: postgres
       DASHBOARD_PORT: "8080"
+    volumes:
+      - ./python:/app
     ports:
       - "8080:8080"
     depends_on:
@@ -79,6 +83,8 @@ services:
       PGUSER:           postgres
       PGPASSWORD:       postgres
       CHANGE_INTERVAL:  "2"   # seconds between operations
+    volumes:
+      - ./python:/app
     depends_on:
       postgres:
         condition: service_healthy
