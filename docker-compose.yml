@@ -45,6 +45,26 @@ services:
     restart: on-failure
 
   # -------------------------------------------------------------------------
+  # Dashboard – serves HTML + SSE stream for live stats updates
+  # -------------------------------------------------------------------------
+  dashboard:
+    build: ./python
+    command: python dashboard.py
+    environment:
+      PGHOST:     postgres
+      PGPORT:     "5432"
+      PGDATABASE: testdb
+      PGUSER:     postgres
+      PGPASSWORD: postgres
+      DASHBOARD_PORT: "8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  # -------------------------------------------------------------------------
   # Producer – continuously INSERTs / UPDATEs / DELETEs rows
   # Start manually:  docker compose run --rm producer
   # Or add to the default profile by removing the `profiles` key below.

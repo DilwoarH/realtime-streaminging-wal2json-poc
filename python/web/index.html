@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wal2JSON Live Stats</title>
+    <style>
+      :root {
+        --bg: radial-gradient(circle at 20% 20%, #18323c 0%, #0d1a1f 45%, #070e11 100%);
+        --panel: rgba(17, 29, 35, 0.8);
+        --accent: #7ee0ff;
+        --text: #e8f6fb;
+        --muted: #9eb5bf;
+        --ok: #37c27f;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+      }
+
+      .wrap {
+        width: min(980px, 100%);
+        background: var(--panel);
+        border: 1px solid rgba(126, 224, 255, 0.2);
+        border-radius: 18px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+      }
+
+      .head {
+        padding: 22px 24px;
+        border-bottom: 1px solid rgba(126, 224, 255, 0.15);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.1rem, 2.8vw, 1.7rem);
+        letter-spacing: 0.03em;
+      }
+
+      .status {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .status .dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        margin-right: 8px;
+        background: #d1902e;
+        vertical-align: middle;
+      }
+
+      .status.live .dot {
+        background: var(--ok);
+        box-shadow: 0 0 10px rgba(55, 194, 127, 0.8);
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .card {
+        border-radius: 14px;
+        padding: 14px;
+        background: linear-gradient(145deg, rgba(18, 40, 49, 0.8), rgba(9, 24, 29, 0.85));
+        border: 1px solid rgba(126, 224, 255, 0.15);
+        transform: translateY(8px);
+        opacity: 0;
+        animation: reveal 400ms ease forwards;
+      }
+
+      .name {
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.75rem;
+      }
+
+      .count {
+        font-size: clamp(1.6rem, 4vw, 2.2rem);
+        margin: 8px 0 0;
+        font-weight: 700;
+      }
+
+      .foot {
+        border-top: 1px solid rgba(126, 224, 255, 0.15);
+        padding: 12px 18px;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      @keyframes reveal {
+        to { transform: translateY(0); opacity: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="head">
+        <h1>Wal2JSON Order Stats</h1>
+        <div id="conn" class="status"><span class="dot"></span>connecting</div>
+      </header>
+
+      <section id="cards" class="cards"></section>
+
+      <footer class="foot">
+        Last update: <span id="last">-</span>
+      </footer>
+    </main>
+
+    <script>
+      const cardsEl = document.getElementById("cards");
+      const lastEl = document.getElementById("last");
+      const connEl = document.getElementById("conn");
+
+      function setConn(connected) {
+        connEl.classList.toggle("live", connected);
+        connEl.innerHTML = `<span class="dot"></span>${connected ? "live" : "reconnecting"}`;
+      }
+
+      function renderStats(stats) {
+        cardsEl.innerHTML = "";
+
+        stats.forEach((row, i) => {
+          const card = document.createElement("article");
+          card.className = "card";
+          card.style.animationDelay = `${i * 50}ms`;
+          card.innerHTML = `
+            <div class="name">${row.status}</div>
+            <div class="count">${row.order_count}</div>
+          `;
+          cardsEl.appendChild(card);
+        });
+
+        lastEl.textContent = new Date().toLocaleTimeString();
+      }
+
+      async function loadInitial() {
+        const res = await fetch("/api/stats");
+        const data = await res.json();
+        renderStats(data.stats);
+      }
+
+      function connectEvents() {
+        const source = new EventSource("/events");
+
+        source.addEventListener("stats", (event) => {
+          const payload = JSON.parse(event.data);
+          renderStats(payload.stats);
+        });
+
+        source.onopen = () => setConn(true);
+        source.onerror = () => setConn(false);
+      }
+
+      loadInitial().catch(() => {});
+      connectEvents();
+    </script>
+  </body>
+</html>

@@ -35,3 +35,19 @@ INSERT INTO stats (status) VALUES
     ('shipped'),
     ('delivered'),
     ('cancelled');
+
+-- Notify listeners whenever the stats table changes.
+CREATE OR REPLACE FUNCTION notify_stats_changed()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    PERFORM pg_notify('stats_changed', 'changed');
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER stats_changed_notify
+AFTER INSERT OR UPDATE OR DELETE ON stats
+FOR EACH STATEMENT
+EXECUTE FUNCTION notify_stats_changed();
