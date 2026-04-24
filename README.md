@@ -13,9 +13,11 @@ A minimal CDC (Change Data Capture) prototype using **PostgreSQL 17**, the **wal
 │  │  + wal2json │                     │  (repl slot)     │   │
 │  └──────┬──────┘                     └──────────────────┘   │
 │         │ SQL (INSERT/UPDATE/DELETE)                         │
-│  ┌──────┴──────┐                                            │
-│  │ producer.py │                                            │
-│  └─────────────┘                                            │
+│  ┌──────┴──────┐                     ┌──────────────────┐   │
+│  │ producer.py │                     │ dashboard.py     │   │
+│  └─────────────┘                     │ + web/index.html │   │
+│                                      │ (SSE live UI)    │   │
+│                                      └──────────────────┘   │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -23,17 +25,26 @@ A minimal CDC (Change Data Capture) prototype using **PostgreSQL 17**, the **wal
 |------------|-------------|
 | `postgres` | PostgreSQL 17 with `wal2json` installed; `wal_level=logical` |
 | `consumer` | Python script that opens a replication slot and prints WAL events |
+| `dashboard` | Flask app that serves the frontend UI and streams live stats via Server-Sent Events |
 | `producer` | Python script that generates a stream of DML changes (manual profile) |
 
 ## Quick start
 
-### 1. Start PostgreSQL + consumer
+### 1. Start PostgreSQL + consumer + dashboard
 
 ```bash
 docker compose up --build
 ```
 
 The consumer will wait for Postgres to be healthy, create the `wal2json_slot` replication slot, then begin streaming.
+
+The dashboard will also start and expose a live UI at:
+
+```text
+http://localhost:8080
+```
+
+It fetches initial stats from `/api/stats` and then subscribes to `/events` for real-time updates.
 
 ### 2. Start the producer (separate terminal)
 
@@ -56,6 +67,8 @@ The producer inserts orders, updates statuses, deletes cancelled orders, and adj
 --- COMMIT ---
 ```
 
+At the same time, the frontend dashboard updates the status counters live with flip-style animations as rows change.
+
 ### 3. Tear down
 
 ```bash
@@ -75,6 +88,7 @@ All services read their settings from environment variables. Override them in `d
 | `PGPASSWORD`      | `postgres`      | Database password                    |
 | `SLOT_NAME`       | `wal2json_slot` | Logical replication slot name        |
 | `CHANGE_INTERVAL` | `2`             | Seconds between producer operations  |
+| `DASHBOARD_PORT`  | `8080`          | Frontend/dashboard HTTP port         |
 
 ## Running the Python scripts locally (no Docker)
 
@@ -87,7 +101,12 @@ PGHOST=localhost python consumer.py
 
 # terminal 2
 PGHOST=localhost python producer.py
+
+# terminal 3 (frontend + API)
+PGHOST=localhost DASHBOARD_PORT=8080 python dashboard.py
 ```
+
+Then open `http://localhost:8080` in your browser.
 
 ## Project layout
 
@@ -101,7 +120,10 @@ PGHOST=localhost python producer.py
     ├── Dockerfile
     ├── requirements.txt    # psycopg2-binary
     ├── consumer.py         # logical replication consumer
-    └── producer.py         # DML workload generator
+    ├── dashboard.py        # Flask dashboard + SSE endpoint
+    ├── producer.py         # DML workload generator
+    └── web/
+        └── index.html      # live frontend UI
 ```
 
 ## References
