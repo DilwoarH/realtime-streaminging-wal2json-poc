@@ -93,6 +93,12 @@ All services read their settings from environment variables. Override them in `d
 | `CHANGE_INTERVAL` | `2`             | Seconds between producer operations  |
 | `DASHBOARD_PORT`  | `8080`          | Frontend/dashboard HTTP port         |
 
+## SQL-only version
+
+If you only want PostgreSQL + wal2json (without the Python producer/consumer/dashboard), use the SQL-only setup:
+
+- [postgres-sql-only/README.md](postgres-sql-only/README.md)
+
 ## Running the Python scripts locally (no Docker)
 
 ```bash
